@@ -6,6 +6,7 @@ from decimal import *
 
 setcontext(ExtendedContext)
 
+
 @total_ordering
 class Point:
     def __init__(self, value1):
@@ -45,6 +46,7 @@ class Point:
 
     def __lt__(self, other):
         return self.x < other.x or (self.x == other.x and self.y < other.y)
+
 
 @total_ordering
 class Event(Point):
@@ -93,17 +95,17 @@ class Segment:
         elif isinstance(value1, (tuple, list)) and len(value1) == 4:
             self._begin = Point(value1[0:1])
             self._end = Point(value1[2:3])
-        elif isinstance(value1, (tuple, list)) and len(value1) == 2 and isinstance(value2, (tuple, list)) and len(value2) == 2:
+        elif isinstance(value1, (tuple, list)) and len(value1) == 2 and isinstance(value2, (tuple, list)) and len(
+                value2) == 2:
             self._begin = Point(value1)
             self._end = Point(value2)
-        elif value1 is not None and value2 is not None and value3 is not None and value4 is not None :
+        elif value1 is not None and value2 is not None and value3 is not None and value4 is not None:
             self._begin = Point((value1, value2))
             self._end = Point((value3, value4))
         else:
             raise ValueError("Enter the begin and end Point instances or four coordinates x1, y1, x2, y2")
 
         self.swap_check()
-
 
     def swap_check(self):
         if self.begin.x > self.end.x:
@@ -171,8 +173,8 @@ class Segment:
     def set_line_y(self, value):
         if self.begin.x != self.end.x:
             a = (self.end.y - self.begin.y) / (self.end.x - self.begin.x)
-            b = self.begin.y - a*self.begin.x
-            self._line_y = a*Decimal(value) + b
+            b = self.begin.y - a * self.begin.x
+            self._line_y = a * Decimal(value) + b
         else:
             self._line_y = Decimal('Infinity')
 
@@ -184,17 +186,17 @@ class Segment:
 
     # ordering by y coordinate of line crossing
     def __eq__(self, other):
-        #return self.begin.y == other.begin.y and self.begin.x == other.begin.x
+        # return self.begin.y == other.begin.y and self.begin.x == other.begin.x
         return self.line_y == other.line_y
 
     def __lt__(self, other):
-        #return self.begin.y < other.begin.y or (self.begin.y == other.begin.y and self.begin.x < other.begin.x)
+        # return self.begin.y < other.begin.y or (self.begin.y == other.begin.y and self.begin.x < other.begin.x)
         return self.line_y < other.line_y
 
 
 class Bott:
     def __init__(self):
-        self.que = []   # event queue
+        self.que = []  # event queue
         self.line = []  # segments which are crossed by the line
         self.segs = []  # list of segments
         self.cross_out = []  # list of crossections
@@ -205,19 +207,33 @@ class Bott:
         self.min_x = None
         self.max_x = None
 
-
     def get_segments(self):
-        pass
+        with open('bentley_input') as f:
+            lines = f.readlines()
+            for line in lines:
+                lin = line.strip()
+                if lin.startswith('#') or len(lin) == 0:
+                    continue
+                numbers = lin.split()
+                # print(numbers)
+                self.segs.append(Segment(*numbers))
+
+        w = [seg.begin.y for seg in self.segs] + [seg.end.y for seg in self.segs]
+        h = [seg.begin.x for seg in self.segs] + [seg.end.x for seg in self.segs]
+        self.min_y = min(w)
+        self.max_y = max(w)
+        self.max_x = max(h)
+        self.min_x = min(h)
 
     def generate_segments(self):
         self.segs.append(Segment(1, 2, 4, 1))
         self.segs.append(Segment(2, 1, 9, 8))
-        #self.segs.append(Segment(2, 1, 3, 3))
+        # self.segs.append(Segment(2, 1, 3, 3))
         self.segs.append(Segment(7, 0, 6, 5))
-        #self.segs.append(Segment(4.5, 2.5, 7, 3))
+        # self.segs.append(Segment(4.5, 2.5, 7, 3))
         self.segs.append(Segment(2.5, 0.5, 7, 3))
         self.segs.append(Segment(2.5, 4, 7, 4))
-        self.segs.append(Segment(7, 4, 9,8))
+        self.segs.append(Segment(7, 4, 9, 8))
         self.segs.append(Segment(0.5, 4, 0.5, 6))
         self.segs.append(Segment(-1, 5, 2, 5))
 
@@ -245,7 +261,7 @@ class Bott:
         L1 = Bott.line(seg1)
         L2 = Bott.line(seg2)
 
-        D  = L1[0] * L2[1] - L1[1] * L2[0]
+        D = L1[0] * L2[1] - L1[1] * L2[0]
         Dx = L1[2] * L2[1] - L1[1] * L2[2]
         Dy = L1[0] * L2[2] - L1[2] * L2[0]
 
@@ -255,9 +271,9 @@ class Bott:
             iy = Dy / D
 
             if min(seg1.begin.x, seg1.end.x) <= ix <= max(seg1.begin.x, seg1.end.x) and \
-                min(seg1.begin.y, seg1.end.y) <= iy <= max(seg1.begin.y, seg1.end.y) and \
-                min(seg2.begin.x, seg2.end.x) <= ix <= max(seg2.begin.x, seg2.end.x) and \
-                min(seg2.begin.y, seg2.end.y) <= iy <= max(seg2.begin.y, seg2.end.y):
+                                    min(seg1.begin.y, seg1.end.y) <= iy <= max(seg1.begin.y, seg1.end.y) and \
+                                    min(seg2.begin.x, seg2.end.x) <= ix <= max(seg2.begin.x, seg2.end.x) and \
+                                    min(seg2.begin.y, seg2.end.y) <= iy <= max(seg2.begin.y, seg2.end.y):
                 ev = Event((ix, iy), 'C', seg1, seg2)
                 print("Intersection: ", ev, seg1, seg2)
                 return ev
@@ -275,8 +291,9 @@ class Bott:
         else:
             return None
 
-        # i = self.line.index(seg)
-        # return self.line[i+1] if i+1 < len(self.line) else None
+            # i = self.line.index(seg)
+            # return self.line[i+1] if i+1 < len(self.line) else None
+
     def get_right_multiple(self, seg):
         i = bs.bisect(self.line, seg)
         if i != len(self.line):
@@ -296,24 +313,23 @@ class Bott:
         """
         i = bs.bisect(self.line, seg)
         if i > 1:
-            return self.line[i-2]
+            return self.line[i - 2]
         else:
             return None
 
-        # i = self.line.index(seg)
-        # return self.line[i - 1] if i - 1 >= 0 else None
+            # i = self.line.index(seg)
+            # return self.line[i - 1] if i - 1 >= 0 else None
 
     def get_left_multiple(self, seg):
         i = bs.bisect(self.line, seg)
         if i > 1:
-            lr = [self.line[i-2], ]
+            lr = [self.line[i - 2], ]
             i -= 1
-            while i > 1 and self.line[i-2].line_y == lr[0].line_y:
-                lr.append(self.line[i-2])
+            while i > 1 and self.line[i - 2].line_y == lr[0].line_y:
+                lr.append(self.line[i - 2])
                 i -= 1
             return lr
         return None
-
 
     def draw_seg(self, seg):
         plt.plot((seg.begin.x, seg.end.x), (seg.begin.y, seg.end.y))
@@ -325,8 +341,8 @@ class Bott:
     def init_plot(self):
         plt.ion()
         plt.figure().add_subplot(1, 1, 1).set_aspect('equal')
-        plt.ylim([float(self.min_y)-1, float(self.max_y)+1])
-        plt.xlim([float(self.min_x)-1, float(self.max_x)+1])
+        plt.ylim([float(self.min_y) - 1, float(self.max_y) + 1])
+        plt.xlim([float(self.min_x) - 1, float(self.max_x) + 1])
         plt.show()
         for seg in self.segs:
             self.draw_seg(seg)
@@ -337,7 +353,7 @@ class Bott:
 
         while len(self.que) > 0:
             e = self.que.pop(0)
-            self.plot_line_ref, = plt.plot([e.x, e.x], [self.min_y-1, self.max_y+1], color='k')
+            self.plot_line_ref, = plt.plot([e.x, e.x], [self.min_y - 1, self.max_y + 1], color='k')
             plt.draw()
 
             if e.ev_type == 'B':
@@ -347,8 +363,8 @@ class Bott:
 
                 segE = e.seg1
                 bs.insort(self.line, segE)
-                #segA = self.get_right(segE)
-                #segB = self.get_left(segE)
+                # segA = self.get_right(segE)
+                # segB = self.get_left(segE)
                 segA = self.get_right_multiple(segE)
                 segB = self.get_left_multiple(segE)
                 if segA:
@@ -372,9 +388,9 @@ class Bott:
                 segA = self.get_right_multiple(segE)
                 segB = self.get_left_multiple(segE)
                 i = bs.bisect_left(self.line, segE)
-                if not(i != len(self.line) and self.line[i]):
+                if not (i != len(self.line) and self.line[i]):
                     raise Exception("Nenaslo")
-                #i = self.line.index(segE)
+                # i = self.line.index(segE)
                 print("NAJITI ", i, self.line)
                 del self.line[i]
                 if segA and segB:
@@ -402,7 +418,7 @@ class Bott:
                 if i1 == i2 == len(self.line):
                     raise Exception("Segments not found")
                 self.line[i1], self.line[i2] = self.line[i2], self.line[i1]
-                segA = self.line[i1+1] if len(self.line) < i1 - 2 else None
+                segA = self.line[i1 + 1] if len(self.line) < i1 - 2 else None
                 segB = self.line[i2 - 1] if i2 > 0 else None
                 if segA:
                     int1 = self.intersection(segA, segE2)
@@ -421,7 +437,6 @@ class Bott:
                     seg.set_line_y(e.x)
                 self.line = sorted(self.line)
 
-
             plt.pause(2)
             self.plot_line_ref.remove()
             plt.draw()
@@ -434,27 +449,10 @@ class Bott:
 if __name__ == '__main__':
     bot = Bott()
 
-    bot.generate_segments()
+    bot.get_segments()
+    # bot.generate_segments()
     bot.init_que()
     print(bot.segs)
     print(bot.que)
-    print ("VYSLEDEK", bot.find_cross())
+    print("VYSLEDEK", bot.find_cross())
     input("Press enter to exit")
-
-    # plt.ion()
-    # plt.show()
-    #
-    # plt.figure().add_subplot(1, 1, 1).set_aspect('equal')
-    # #ax = fig.add_subplot(1, 1, 1)
-    # #ax.set_aspect('equal')
-    # x = [1,2,3,4]
-    # y = [1,4,9,16]
-    # refx, = plt.plot(x, y)
-    # plt.draw()
-    # plt.pause(0.001)
-    #
-    # circle = plt.Circle((1,1), .5, color='k', clip_on=False, fill=False)
-    # fig = plt.gcf()
-    # fig.gca().add_artist(circle)
-    # plt.pause(0.001)
-    # input('df')
