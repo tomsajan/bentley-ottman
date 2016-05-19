@@ -205,9 +205,23 @@ class Bott:
         self.min_x = None
         self.max_x = None
 
-
     def get_segments(self):
-        pass
+        with open('bentley_input') as f:
+            lines = f.readlines()
+            for line in lines:
+                lin = line.strip()
+                if lin.startswith('#') or len(lin) == 0:
+                    continue
+                numbers = lin.split()
+                # print(numbers)
+                self.segs.append(Segment(*numbers))
+
+        w = [seg.begin.y for seg in self.segs] + [seg.end.y for seg in self.segs]
+        h = [seg.begin.x for seg in self.segs] + [seg.end.x for seg in self.segs]
+        self.min_y = min(w)
+        self.max_y = max(w)
+        self.max_x = max(h)
+        self.min_x = min(h)
 
     def generate_segments(self):
         self.segs.append(Segment(1, 2, 4, 1))
@@ -434,27 +448,11 @@ class Bott:
 if __name__ == '__main__':
     bot = Bott()
 
-    bot.generate_segments()
+    bot.get_segments()
+    #bot.generate_segments()
     bot.init_que()
     print(bot.segs)
     print(bot.que)
     print ("VYSLEDEK", bot.find_cross())
     input("Press enter to exit")
 
-    # plt.ion()
-    # plt.show()
-    #
-    # plt.figure().add_subplot(1, 1, 1).set_aspect('equal')
-    # #ax = fig.add_subplot(1, 1, 1)
-    # #ax.set_aspect('equal')
-    # x = [1,2,3,4]
-    # y = [1,4,9,16]
-    # refx, = plt.plot(x, y)
-    # plt.draw()
-    # plt.pause(0.001)
-    #
-    # circle = plt.Circle((1,1), .5, color='k', clip_on=False, fill=False)
-    # fig = plt.gcf()
-    # fig.gca().add_artist(circle)
-    # plt.pause(0.001)
-    # input('df')
