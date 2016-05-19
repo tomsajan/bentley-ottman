@@ -391,7 +391,7 @@ class Bott:
                 if not (i != len(self.line) and self.line[i]):
                     raise Exception("Nenaslo")
                 # i = self.line.index(segE)
-                print("NAJITI ", i, self.line)
+                #print("NAJITI ", i, self.line)
                 del self.line[i]
                 if segA and segB:
                     for sA in segA:
