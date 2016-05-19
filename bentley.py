@@ -63,9 +63,9 @@ class Event(Point):
     def __eq__(self, other):
         return self.x == other.x \
                and self.y == other.y \
-               and self.ev_type == other.ev_type \
-               and self.seg1 is other.seg1 \
-               and self.seg2 is other.seg2
+               # and self.ev_type == other.ev_type \
+               # and self.seg1 is other.seg1 \
+               # and self.seg2 is other.seg2
 
     def __lt__(self, other):
         if self.x < other.x:
@@ -73,13 +73,13 @@ class Event(Point):
         if self.x == other.x:
             if self.y < other.y:
                 return True
-            if self.y == other.y:
-                if self.ev_type == 'B' and other.ev_type == 'C':
-                    return True
-                if self.ev_type == 'B' and other.ev_type == 'E':
-                    return True
-                if self.ev_type == 'C' and other.ev_type == 'E':
-                    return True
+            # if self.y == other.y:
+            #     if self.ev_type == 'B' and other.ev_type == 'C':
+            #         return True
+            #     if self.ev_type == 'B' and other.ev_type == 'E':
+            #         return True
+            #     if self.ev_type == 'C' and other.ev_type == 'E':
+            #         return True
         return False
 
 
@@ -104,8 +104,11 @@ class Segment:
 
         self.swap_check()
 
-
     def swap_check(self):
+        """
+        swaps begin and end. The direction of lines is from left to right, from bottom to top
+        :return:
+        """
         if self.begin.x > self.end.x:
             print('SWAPPING')
             self.begin.x, self.end.x = self.end.x, self.begin.x
@@ -174,7 +177,7 @@ class Segment:
             b = self.begin.y - a*self.begin.x
             self._line_y = a*Decimal(value) + b
         else:
-            self._line_y = Decimal('Infinity')
+            self._line_y = Decimal('-Infinity')
 
     def __str__(self):
         return u"Segment %s -> %s" % (self._begin, self._end)
@@ -191,6 +194,8 @@ class Segment:
         #return self.begin.y < other.begin.y or (self.begin.y == other.begin.y and self.begin.x < other.begin.x)
         return self.line_y < other.line_y
 
+    def __hash__(self):
+        return hash(repr(self))
 
 class Bott:
     def __init__(self):
@@ -205,9 +210,23 @@ class Bott:
         self.min_x = None
         self.max_x = None
 
-
     def get_segments(self):
-        pass
+        with open('bentley_input') as f:
+            lines = f.readlines()
+            for line in lines:
+                lin = line.strip()
+                if lin.startswith('#') or len(lin) == 0:
+                    continue
+                numbers = lin.split()
+                #print(numbers)
+                self.segs.append(Segment(*numbers))
+
+        w = [seg.begin.y for seg in self.segs] + [seg.end.y for seg in self.segs]
+        h = [seg.begin.x for seg in self.segs] + [seg.end.x for seg in self.segs]
+        self.min_y = min(w)
+        self.max_y = max(w)
+        self.max_x = max(h)
+        self.min_x = min(h)
 
     def generate_segments(self):
         self.segs.append(Segment(1, 2, 4, 1))
@@ -332,95 +351,162 @@ class Bott:
             self.draw_seg(seg)
         plt.draw()
 
+    def locate_event_in_que(self, seg1, seg2):
+        """
+        locates event in que that is connected to given segments
+        :param seg1: segment or None
+        :param seg2: segment or None
+        :return: position in self.que or None
+        """
+        for i in range(len(self.que)):
+            ev = self.que[i]
+            if ev.seg1 is seg1 and ev.seg2 is seg2:
+                return i
+        return None
+
+    def pop_from_que(self):
+        """
+        returns all events from the beginning of the que that have the same coordinates
+        :return:
+        """
+        pop_list = [self.que.pop(0)]
+        while len(self.que) > 0 and self.que[0] == pop_list[0]:
+            pop_list.append(self.que.pop(0))
+
+        return pop_list
+
+    def recalculate_line_y(self, value):
+        for seg in self.segs:
+            seg.set_line_y(value)
+
     def find_cross(self):
         self.init_plot()
+        self.recalculate_line_y(self.min_x)
 
         while len(self.que) > 0:
-            e = self.que.pop(0)
-            self.plot_line_ref, = plt.plot([e.x, e.x], [self.min_y-1, self.max_y+1], color='k')
+            e_list = self.pop_from_que()
+
+            self.plot_line_ref, = plt.plot([e_list[0].x, e_list[0].x], [self.min_y - 1, self.max_y + 1], color='k')
             plt.draw()
 
-            if e.ev_type == 'B':
-                for seg in self.segs:
-                    seg.set_line_y(e.x)
-                self.line = sorted(self.line)
+            #e = self.que.pop(0)
+            batch = len(e_list) > 1  #batch, multiple events with same coordinates
+            cross_processed = False
+            for e in e_list:
+                if e.ev_type == 'B':
+                    # for seg in self.segs:
+                    #     seg.set_line_y(e.x)
+                    # self.line = sorted(self.line)
+                    #
+                    segE = e.seg1
+                    bs.insort(self.line, segE)
+                    segA = self.get_right(segE)
+                    segB = self.get_left(segE)
+                    #segA = self.get_right_multiple(segE)
+                    #segB = self.get_left_multiple(segE)
+                    if segA and segB:
+                        ev_ind = self.locate_event_in_que(segA, segB)
+                        if ev_ind:
+                            del self.que[ev_ind]
 
-                segE = e.seg1
-                bs.insort(self.line, segE)
-                #segA = self.get_right(segE)
-                #segB = self.get_left(segE)
-                segA = self.get_right_multiple(segE)
-                segB = self.get_left_multiple(segE)
-                if segA:
-                    for seg in segA:
-                        int1 = self.intersection(segE, seg)
+                    if segA:
+                        int1 = self.intersection(segE, segA)
                         if int1:
-                            bs.insort(self.que, int1)
+                            if batch and int1 == e: #the same location
+                                e_list.append(int1)
+                            else:
+                                bs.insort(self.que, int1)
 
-                if segB:
-                    for seg in segB:
-                        int2 = self.intersection(segE, seg)
+                    if segB:
+                        int2 = self.intersection(segE, segB)
                         if int2:
-                            bs.insort(self.que, int2)
+                            if batch and int2 == e:
+                                e_list.append(int2)
+                            else:
+                                bs.insort(self.que, int2)
 
-            elif e.ev_type == 'E':
-                for seg in self.segs:
-                    seg.set_line_y(e.x)
-                self.line = sorted(self.line)
+                elif e.ev_type == 'E':
+                    # for seg in self.segs:
+                    #     seg.set_line_y(e.x)
+                    # self.line = sorted(self.line)
 
-                segE = e.seg1
-                segA = self.get_right_multiple(segE)
-                segB = self.get_left_multiple(segE)
-                i = bs.bisect_left(self.line, segE)
-                if not(i != len(self.line) and self.line[i]):
-                    raise Exception("Nenaslo")
-                #i = self.line.index(segE)
-                print("NAJITI ", i, self.line)
-                del self.line[i]
-                if segA and segB:
-                    for sA in segA:
-                        for sB in segB:
-                            int1 = self.intersection(sA, sB)
-                            if int1:
+                    segE = e.seg1
+                    #segA = self.get_right_multiple(segE)
+                    segA = self.get_right(segE)
+                    #segB = self.get_left_multiple(segE)
+                    segB = self.get_left(segE)
+                    i = bs.bisect_left(self.line, segE)
+                    if not(i != len(self.line) and self.line[i]):
+                        print(i, len(self.line))
+                        raise Exception("Nenaslo")
+                    #i = self.line.index(segE)
+                    print("NAJITI ", i, self.line)
+                    del self.line[i]
+                    if segA and segB:
+                        int1 = self.intersection(segA, segB)
+                        if int1:
+                            if not batch or int1 != e:
+                                ev_ind = self.locate_event_in_que(segA, segB)
+                                if ev_ind is None:  # this intersection if not in que
+                                    bs.insort(self.que, int1)
+                            # throw the intersection away if it is in the same point
+
+                            #i = bs.bisect_left(self.que, int1)
+                            #if i == len(self.que) or int1 != self.que[i]:
+                            #    bs.insort(self.que, int1)
+                else:
+                    if not cross_processed:
+                        self.cross_out.append(e)
+                        self.draw_intersection(e)
+                        plt.draw()
+
+                        segment_set = set()
+                        for ev in e_list:
+                            if ev.seg1:
+                                segment_set.add(ev.seg1)
+                            if ev.seg2:
+                                segment_set.add(ev.seg2)
+
+                        segment_sorted = sorted(list(segment_set))
+                        minval = segment_sorted[0].line_y
+                        maxval = segment_sorted[-1].line_y
+
+                        minseg = bs.bisect_left(self.line, segment_sorted[0])
+                        maxseg = bs.bisect_right(self.line, segment_sorted[-1])
+
+                        #switch order
+                        self.line[minseg:maxseg] = self.line[minseg:maxseg][::-1]
+
+                        # if e.seg2 < e.seg1:
+                        #     segE1 = e.seg1
+                        #     segE2 = e.seg2
+                        # else:
+                        #     segE2 = e.seg1
+                        #     segE1 = e.seg2
+                        # i1 = bs.bisect_left(self.line, segE1)
+                        # i2 = bs.bisect_left(self.line, segE2)
+                        # if i1 == i2 == len(self.line):
+                        #     raise Exception("Segments not found")
+                        # self.line[i1], self.line[i2] = self.line[i2], self.line[i1]
+                        segA = self.line[maxseg + 1] if len(self.line) < maxseg - 2 else None
+                        segB = self.line[minseg - 1] if minseg > 0 and minseg < len(self.line) else None
+                        if segA:
+                            int1 = self.intersection(segA, self.line[maxseg])
+                            if int1 and int1 != e:
                                 i = bs.bisect_left(self.que, int1)
                                 if i == len(self.que) or int1 != self.que[i]:
                                     bs.insort(self.que, int1)
+                        if segB:
+                            print(len(self.line), minseg)
+                            int2 = self.intersection(segB, self.line[minseg])
+                            if int2 and int2 != e:
+                                i = bs.bisect_left(self.que, int2)
+                                if i == len(self.que) or int2 != self.que[i]:
+                                    bs.insort(self.que, int2)
 
-            else:
-                self.cross_out.append(e)
-                self.draw_intersection(e)
-                plt.draw()
+                        cross_processed = True
 
-                if e.seg2 < e.seg1:
-                    segE1 = e.seg1
-                    segE2 = e.seg2
-                else:
-                    segE2 = e.seg1
-                    segE1 = e.seg2
-                i1 = bs.bisect_left(self.line, segE1)
-                i2 = bs.bisect_left(self.line, segE2)
-                if i1 == i2 == len(self.line):
-                    raise Exception("Segments not found")
-                self.line[i1], self.line[i2] = self.line[i2], self.line[i1]
-                segA = self.line[i1+1] if len(self.line) < i1 - 2 else None
-                segB = self.line[i2 - 1] if i2 > 0 else None
-                if segA:
-                    int1 = self.intersection(segA, segE2)
-                    if int1:
-                        i = bs.bisect_left(self.que, int1)
-                        if i == len(self.que) or int1 != self.que[i]:
-                            bs.insort(self.que, int1)
-                if segB:
-                    int2 = self.intersection(segB, segE1)
-                    if int2:
-                        i = bs.bisect_left(self.que, int2)
-                        if i == len(self.que) or int2 != self.que[i]:
-                            bs.insort(self.que, int2)
-
-                for seg in self.segs:
-                    seg.set_line_y(e.x)
-                self.line = sorted(self.line)
-
+            self.recalculate_line_y(e_list[0].x)
 
             plt.pause(2)
             self.plot_line_ref.remove()
@@ -435,6 +521,7 @@ if __name__ == '__main__':
     bot = Bott()
 
     bot.generate_segments()
+    #bot.get_segments()
     bot.init_que()
     print(bot.segs)
     print(bot.que)
